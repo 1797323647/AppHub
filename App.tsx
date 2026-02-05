@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Search, Download, Star, Sparkles, X, Share2, Check, AlertCircle, Globe } from 'lucide-react';
+import { Search, Download, Star, Sparkles, X, Share2, Check, AlertCircle, HelpCircle, Wifi } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { APPS, CATEGORIES } from './constants';
 import { AppItem } from './types';
@@ -86,8 +86,6 @@ export default function App() {
     });
   }, [searchTerm, selectedCategory]);
 
-  const featuredApps = useMemo(() => APPS.filter(app => app.featured), []);
-
   const handleShare = () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -107,19 +105,18 @@ export default function App() {
     setShowAiModal(true);
     setAiError(null);
     
-    // 检查环境变量是否存在，注意这里的检查方式要兼容编译后的代码
     const apiKey = process.env.API_KEY;
-    if (!apiKey || apiKey === '') {
-      setAiError("未检测到 API Key。请在 Vercel 环境变量中配置 API_KEY 后重新部署。");
+    if (!apiKey) {
+      setAiError("请在 Vercel 环境变量中设置 API_KEY 以使用 AI 推荐功能。");
       return;
     }
 
     setIsAiLoading(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey });
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: "帮我推荐 5 个当前全球非常流行且实用的主流应用程序（包含中文名），简要说明理由。以JSON数组格式返回，包含'name'和'reason'属性。",
+        contents: "帮我推荐 5 个当前全球非常流行且实用的主流应用程序，包含理由。JSON格式。",
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -135,11 +132,9 @@ export default function App() {
           }
         }
       });
-      const data = JSON.parse(response.text || '[]');
-      setAiSuggestions(data);
+      setAiSuggestions(JSON.parse(response.text || '[]'));
     } catch (error) {
-      console.error("AI Error:", error);
-      setAiError("无法连接 AI 服务，请检查 API Key 或网络环境。");
+      setAiError("AI 服务连接失败，可能因地区网络原因受限。");
     } finally {
       setIsAiLoading(false);
     }
@@ -157,11 +152,11 @@ export default function App() {
               探索更高效的<br />
               <span className="text-indigo-600">数字生活方式</span>
             </h1>
-            <p className="text-lg text-gray-500 mb-8 max-w-xl mx-auto px-4">
-              精选全球主流应用官方下载链接，告别乱弹窗与不安全来源。
+            <p className="text-lg text-gray-500 mb-8 max-w-xl mx-auto">
+              精选全球主流应用官方下载链接，告别不安全来源。
             </p>
             
-            <div className="max-w-xl mx-auto relative px-4">
+            <div className="max-w-xl mx-auto relative">
               <div className="relative flex items-center bg-white rounded-2xl shadow-lg p-1.5 border border-gray-100">
                 <Search className="ml-3 text-gray-400" size={20} />
                 <input
@@ -173,7 +168,7 @@ export default function App() {
                 />
                 <button 
                   onClick={handleAiRecommendation}
-                  className="bg-indigo-600 text-white p-2.5 rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                  className="bg-indigo-600 text-white p-2.5 rounded-xl hover:bg-indigo-700 transition-all"
                 >
                   <Sparkles size={18} />
                 </button>
@@ -182,7 +177,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* Categories Scroller */}
+        {/* Categories */}
         <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex overflow-x-auto space-x-3 py-4 no-scrollbar">
@@ -192,7 +187,7 @@ export default function App() {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`flex-shrink-0 flex items-center px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     selectedCategory === cat.id
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
+                      ? 'bg-indigo-600 text-white'
                       : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100'
                   }`}
                 >
@@ -205,38 +200,49 @@ export default function App() {
         </div>
 
         {/* Apps Grid */}
-        <section className="py-8 px-4">
-          <div className="max-w-7xl mx-auto">
-            {filteredApps.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredApps.map(app => (
-                  <AppCard key={app.id} app={app} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
-                <Search className="text-gray-200 mx-auto mb-4" size={48} />
-                <h3 className="text-lg font-medium text-gray-900">暂无结果</h3>
-                <p className="text-gray-400 text-sm">换个关键词试试看</p>
-              </div>
-            )}
-          </div>
+        <section className="py-8 px-4 max-w-7xl mx-auto">
+          {filteredApps.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredApps.map(app => <AppCard key={app.id} app={app} />)}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+              <Search className="text-gray-200 mx-auto mb-4" size={48} />
+              <h3 className="text-lg font-medium text-gray-900">暂无结果</h3>
+            </div>
+          )}
         </section>
       </main>
 
-      {/* Mobile Sticky Toast */}
+      {/* Footer Connectivity Notice */}
+      <footer className="bg-slate-900 text-slate-400 py-12 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-8 text-sm">
+            <div className="flex items-center space-x-2 bg-slate-800 px-4 py-2 rounded-full border border-slate-700">
+              <Wifi size={14} className="text-green-500" />
+              <span>大陆访问受限？建议绑定自定义域名或使用网络工具</span>
+            </div>
+            <div className="flex items-center space-x-2 bg-slate-800 px-4 py-2 rounded-full border border-slate-700">
+              <HelpCircle size={14} className="text-blue-400" />
+              <span>数据均来自应用官方渠道</span>
+            </div>
+          </div>
+          <p className="text-xs mb-2">© 2024 AppHub. Built for global users.</p>
+          <p className="text-[10px] opacity-50">Deployed via Vercel. Domains ending in .vercel.app may be unstable in certain regions.</p>
+        </div>
+      </footer>
+
       {showToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-2 text-sm animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-2 text-sm">
           <Check size={16} className="text-green-400" />
           <span>链接已复制</span>
         </div>
       )}
 
-      {/* AI Modal */}
       {showAiModal && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAiModal(false)}></div>
-          <div className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in duration-300">
+          <div className="relative bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in duration-200">
             <div className="p-5 border-b flex items-center justify-between bg-indigo-600 text-white">
               <div className="flex items-center space-x-2">
                 <Sparkles size={18} />
@@ -250,17 +256,17 @@ export default function App() {
               {isAiLoading ? (
                 <div className="flex flex-col items-center justify-center py-10">
                   <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-                  <p className="text-sm text-gray-500">正在生成推荐清单...</p>
+                  <p className="text-sm text-gray-500 text-center px-4">AI 正在努力思考... <br/>(若网络不佳，加载可能稍慢)</p>
                 </div>
               ) : aiError ? (
                 <div className="text-center py-6">
                   <AlertCircle size={40} className="text-red-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600 px-6">{aiError}</p>
+                  <p className="text-sm text-gray-600 px-6 leading-relaxed">{aiError}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {aiSuggestions.map((item, idx) => (
-                    <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 hover:border-indigo-100 transition-colors">
                       <h4 className="font-bold text-gray-900 text-sm mb-1">{item.name}</h4>
                       <p className="text-xs text-gray-500 leading-relaxed">{item.reason}</p>
                     </div>
